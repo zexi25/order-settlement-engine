@@ -1,0 +1,29 @@
+{
+  "name": "order-settlement-engine",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zexi25/order-settlement-engine.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/zexi25/order-settlement-engine/issues"
+  },
+  "homepage": "https://github.com/zexi25/order-settlement-engine#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "ioredis": "^5.11.1",
+    "pg": "^8.22.0",
+    "redlock": "^5.0.0-beta.2"
+  }
+}
