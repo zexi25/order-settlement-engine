@@ -31,3 +31,29 @@ As a result, all requests proceed to "successfully" decrement stock, regardless 
   make the check-and-delete operation atomic.
 - Next step: Replace the hand-written lock with the `redlock` npm
   package for a more production-grade implementation.
+
+  ## 2026-07-19: Replaced hand-written lock with redlock library
+- Motivation: The hand-written lock (Stage 2) had a known limitation —
+  the unlock logic (GET then DEL) was not atomic, creating a theoretical
+  race window where a lock could be released by the wrong request.
+- Implementation: Switched to the `redlock` npm package, using
+  `redlock.using([lockKey], ttl, callback)` to automatically handle
+  acquire → execute → release, with retryCount=50, retryDelay=30ms,
+  retryJitter=20ms (jitter added to avoid synchronized retry storms
+  across multiple waiting requests, i.e. thundering herd).
+- Verification: Re-ran the same 20-concurrent-request test against
+  5 units of stock. Result: Successful orders: 5, Failed orders: 15,
+  all 15 correctly reported "Insufficient stock for the product" —
+  identical to Stage 2's correct behavior, confirming no regression.
+- Key improvements over the hand-written version:
+  1. Atomic lock release — redlock uses a Lua script internally to
+     make "check ownership + delete" a single atomic operation,
+     eliminating the race window from Stage 2.
+  2. Auto-extension (watchdog-like behavior) — if business logic
+     takes longer than expected, redlock can extend the lock's TTL
+     automatically, removing the need to manually estimate a safe
+     timeout value.
+- Trade-off: Introduced a new dependency (redlock library) and its
+  associated API surface (using() with abort signal), slightly
+  increasing complexity compared to the hand-written version — but
+  the correctness guarantees are worth it for a real system.
