@@ -57,3 +57,28 @@ As a result, all requests proceed to "successfully" decrement stock, regardless 
   associated API surface (using() with abort signal), slightly
   increasing complexity compared to the hand-written version — but
   the correctness guarantees are worth it for a real system.
+
+  ## 2026-07-20: Wrapped order creation in a database transaction (atomicity)
+- Motivation: Previously, "deduct inventory" and "create order" were
+  two independent queries with no transactional guarantee. If order
+  creation failed after inventory was already deducted, the system
+  would end up in an inconsistent state (stock deducted but no order
+  record exists).
+- Implementation: Used pg's client-based transaction (BEGIN / COMMIT /
+  ROLLBACK) around both operations, using a single dedicated connection
+  (pool.connect()) rather than pool.query() directly, since a
+  transaction requires all statements to run on the same connection.
+- Test method: Added a `simulateFailure` flag to deliberately throw an
+  error *after* the inventory deduction query but *before* the order
+  insert, to verify rollback behavior under a realistic failure point.
+- Result:
+  - With simulateFailure=true: request correctly returned an error,
+    inventory remained at 5 (unchanged), orders table remained empty —
+    confirming the deduction was fully rolled back despite having
+    already executed.
+  - With simulateFailure=false: inventory correctly decremented to 4,
+    order record was correctly created — confirming normal flow still
+    works after adding the transaction wrapper.
+- Conclusion: The transaction boundary correctly enforces atomicity —
+  "deduct inventory" and "create order" now succeed or fail as a
+  single unit, with no possibility of partial completion.

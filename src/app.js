@@ -26,9 +26,9 @@ app.get('/inventory/:id', async (req, res) => {
 // });
 
 app.post('/orders', async (req, res) => {
-    const { product_id, quantity } = req.body;
+    const { product_id, quantity, simulateFailure } = req.body;
     try {
-        const order = await createOrder(product_id, quantity);
+        const order = await createOrder(product_id, quantity, simulateFailure);
         res.json(order);
     } catch (error) {
         res.status(400).json({ error: error.message });
